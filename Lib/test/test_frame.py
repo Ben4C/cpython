@@ -463,6 +463,48 @@ class TestFrameCApi(unittest.TestCase):
         f_locals['x'] = 2
         self.assertEqual(x, 2)
 
+class TestSetLineno(unittest.TestCase):
+
+    def test_set_lineno(self):
+
+        ctypes = import_helper.import_module('ctypes')
+        def trace(frame, event, arg):
+
+            if event == 'line':
+                PyFrame_SetLineNumber = ctypes.pythonapi.PyFrame_SetLineNumber
+                PyFrame_SetLineNumber.argtypes = [ctypes.py_object, ctypes.c_int]
+                PyFrame_SetLineNumber.restype = ctypes.c_int
+
+                frame = sys._getframe()
+
+                new_lineno = frame.f_lineno + 1
+                print(new_lineno)
+                print(frame)
+
+                result = PyFrame_SetLineNumber(frame, new_lineno)
+
+                print(result)
+
+                self.assertEqual(result, 0)
+                self.assertEqual(frame.f_lineno, new_lineno)
+
+                with self.assertRaises(ValueError):
+                    PyFrame_SetLineNumber(frame, -1)
+
+                max_valid_lineno = max(frame.f_code.co_firstlineno, frame.f_lineno)
+                with self.assertRaises(ValueError):
+                    PyFrame_SetLineNumber(frame, max_valid_lineno + 1000)
+
+            return trace
+
+        sys.settrace(trace)
+
+        def dummy():
+            pass
+
+        dummy()
+
+        sys.settrace(None)
 
 class TestIncompleteFrameAreInvisible(unittest.TestCase):
 

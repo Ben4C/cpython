@@ -1554,6 +1554,38 @@ frame_setlineno(PyFrameObject *f, PyObject* p_new_lineno, void *Py_UNUSED(ignore
     return 0;
 }
 
+int PyFrame_SetLineNumber(PyFrameObject *f, int lineno)
+{
+    // PyErr_WarnFormat(PyExc_RuntimeWarning, 0,
+    //     "Warning: f_stackpointer: %p, f_localsplus: %p, co_nlocalsplus: %d\n",
+    //     f->f_stackpointer,
+    //     f->f_localsplus,
+    //     _PyFrame_GetCode(f)->co_nlocalsplus);
+
+    // return -1;
+
+    PyObject *p_new_lineno = PyLong_FromLong(lineno);
+    if (p_new_lineno == NULL) {
+        return -1;
+    }
+
+    // if (!PyCode_ValidLineNumber(f->f_code, lineno)) {
+    //     PyErr_SetString(PyExc_ValueError, "Invalid line number");
+    //     return -1;
+    // }
+
+    // if (f->f_stackpointer <= f->f_localsplus + f->f_code->co_nlocalsplus) {
+    //     PyErr_SetString(PyExc_RuntimeError, "Invalid stack state for line jump");
+    //     return -1;
+    // }
+
+    int result = frame_setlineno(f, p_new_lineno, NULL);
+
+    Py_DECREF(p_new_lineno);
+
+    return result;
+}
+
 static PyObject *
 frame_gettrace(PyFrameObject *f, void *closure)
 {

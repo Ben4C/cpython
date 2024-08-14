@@ -139,7 +139,16 @@ See also :ref:`Reflection <reflection>`.
 
    Return the line number that *frame* is currently executing.
 
+.. c:function:: int PyFrame_SetLineNumber(PyFrameObject *frame, int lineno)
 
+   Set the line number to jump to a given line of code.
+   This functionality is limited by:
+
+   * Exception handlers
+   * 'for' and 'async for' loops
+   * Trace functions invoked by 'return' or 'exception' events
+
+   .. versionadded:: 3.14
 
 Internal Frames
 ^^^^^^^^^^^^^^^
