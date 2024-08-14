@@ -46,7 +46,7 @@
    when researching a change.
 
 This article explains the new features in Python 3.13, compared to 3.12.
-
+Python 3.13 will be released on October 1, 2024.
 For full details, see the :ref:`changelog <changelog>`.
 
 .. seealso::
@@ -66,14 +66,38 @@ Summary -- Release Highlights
 .. This section singles out the most important changes in Python 3.13.
    Brevity is key.
 
-Python 3.13 beta is the pre-release of the next version of the Python
-programming language, with a mix of changes to the language, the
-implementation and the standard library. The biggest changes to the
-implementation include a new interactive interpreter, and experimental
-support for dropping the Global Interpreter Lock (:pep:`703`) and a
-Just-In-Time compiler (:pep:`744`). The library changes contain removal of
-deprecated APIs and modules, as well as the usual improvements in
-user-friendliness and correctness.
+Python 3.13 will be the latest stable release of the Python programming
+language, with a mix of changes to the language, the implementation
+and the standard library.
+The biggest changes include a new `interactive interpreter
+<whatsnew313-better-interactive-interpreter_>`_,
+experimental support for running in a `free-threaded mode
+<whatsnew313-free-threaded-cpython_>`_ (:pep:`703`),
+and a `Just-In-Time compiler <whatsnew313-jit-compiler_>`_ (:pep:`744`).
+
+Error messages continue to improve, with tracebacks now highlighted in color
+by default. The :func:`locals` builtin now has :ref:`defined semantics
+<whatsnew313-locals-semantics>` for changing the returned mapping,
+and type parameters now support default values.
+
+The library changes contain removal of deprecated APIs and modules,
+as well as the usual improvements in user-friendliness and correctness.
+Several legacy standard library modules have now `been removed
+<whatsnew313-pep594_>`_ following their deprecation in Python 3.11 (:pep:`594`).
+
+This article doesn't attempt to provide a complete specification
+of all new features, but instead gives a convenient overview.
+For full details refer to the documentation,
+such as the  :ref:`Library Reference <library-index>`
+and :ref:`Language Reference <reference-index>`.
+To understand the complete implementation and design rationale for a change,
+refer to the PEP for a particular new feature;
+but note that PEPs usually are not kept up-to-date
+once a feature has been fully implemented.
+See `Porting to Python 3.13`_ for guidance on upgrading from
+earlier versions of Python.
+
+--------------
 
 .. PEP-sized items next.
 
@@ -82,69 +106,105 @@ Interpreter improvements:
 * A greatly improved :ref:`interactive interpreter
   <whatsnew313-better-interactive-interpreter>` and
   :ref:`improved error messages <whatsnew313-improved-error-messages>`.
-
-* Color support in the new :ref:`interactive interpreter
-  <whatsnew313-better-interactive-interpreter>`,
-  as well as in :ref:`tracebacks <whatsnew313-improved-error-messages>`
-  and :ref:`doctest <whatsnew313-doctest>` output. This can be disabled through the
-  :envvar:`PYTHON_COLORS` and |NO_COLOR|_ environment variables.
-
-* :pep:`744`: A basic :ref:`JIT compiler <whatsnew313-jit-compiler>` was added.
-  It is currently disabled by default (though we may turn it on later).
-  Performance improvements are modest -- we expect to be improving this
-  over the next few releases.
-
 * :pep:`667`: The :func:`locals` builtin now has
   :ref:`defined semantics <whatsnew313-locals-semantics>` when mutating the
   returned mapping. Python debuggers and similar tools may now more reliably
   update local variables in optimized scopes even during concurrent code
   execution.
+* :pep:`703`: CPython 3.13 has experimental support for running with the
+  :term:`global interpreter lock` disabled. See :ref:`Free-threaded CPython
+  <whatsnew313-free-threaded-cpython>` for more details.
+* :pep:`744`: A basic :ref:`JIT compiler <whatsnew313-jit-compiler>` was added.
+  It is currently disabled by default (though we may turn it on later).
+  Performance improvements are modest -- we expect to improve this
+  over the next few releases.
+* Color support in the new :ref:`interactive interpreter
+  <whatsnew313-better-interactive-interpreter>`,
+  as well as in :ref:`tracebacks <whatsnew313-improved-error-messages>`
+  and :ref:`doctest <whatsnew313-doctest>` output.
+  This can be disabled through the :envvar:`PYTHON_COLORS` and |NO_COLOR|_
+  environment variables.
+
+Python data model improvements:
+
+* :attr:`~class.__static_attributes__` stores the names of attributes accessed
+  through ``self.X`` in any function in a class body.
+* :attr:`!__firstlineno__` records the first line number of a class definition.
+
+Significant improvements in the standard library:
+
+* Add a new :exc:`PythonFinalizationError` exception, raised when an operation
+  is blocked during :term:`finalization <interpreter shutdown>`.
+* The :mod:`argparse` module now supports deprecating command-line options,
+  positional arguments, and subcommands.
+* The new functions :func:`base64.z85encode` and :func:`base64.z85decode`
+  support encoding and decoding `Z85 data <https://rfc.zeromq.org/spec/32/>`_.
+* The :mod:`copy` module now has a :func:`copy.replace` function,
+  with support for many builtin types and any class defining
+  the :func:`~object.__replace__` method.
+* The :mod:`dbm.sqlite3` module is now the default :mod:`dbm` backend.
+* The :mod:`os` module has a suite of new functions for working with Linux's
+  timer notification file descriptors.
+* The :mod:`random` module now has a :ref:`command-line interface <random-cli>`.
+
+Security improvements:
+
+* :func:`ssl.create_default_context` sets :data:`ssl.VERIFY_X509_PARTIAL_CHAIN`
+  and :data:`ssl.VERIFY_X509_STRICT` as default flags.
+
+C API improvements:
+
+* The :c:data:`Py_mod_gil` slot is now used to indicate that
+  an extension module supports running with the :term:`GIL` disabled.
+* The :doc:`PyTime C API </c-api/time>` has been added,
+  providing access to system clocks.
+* :c:type:`PyMutex` is a new lightweight mutex that occupies a single byte.
 
 New typing features:
 
 * :pep:`696`: Type parameters (:data:`typing.TypeVar`, :data:`typing.ParamSpec`,
   and :data:`typing.TypeVarTuple`) now support defaults.
-
-* :pep:`702`: Support for marking deprecations in the type system using the
-  new :func:`warnings.deprecated` decorator.
-
-* :pep:`742`: :data:`typing.TypeIs` was added, providing more intuitive
-  type narrowing behavior.
-
-* :pep:`705`: :data:`typing.ReadOnly` was added, to mark an item of a
+* :pep:`702`: The new :func:`warnings.deprecated` decorator adds support
+  for marking deprecations in the type system.
+* :pep:`705`: :data:`typing.ReadOnly` can be used to mark an item of a
   :class:`typing.TypedDict` as read-only for type checkers.
-
-Free-threading:
-
-* :pep:`703`: CPython 3.13 has experimental support for running with the
-  :term:`global interpreter lock` disabled when built with ``--disable-gil``.
-  See :ref:`Free-threaded CPython <free-threaded-cpython>` for more details.
+* :pep:`742`: :data:`typing.TypeIs` provides more intuitive
+  type narrowing behavior, as an alternative to :data:`typing.TypeGuard`.
 
 Platform support:
 
-* :pep:`730`: Apple's iOS is now an officially supported platform. Official
-  Android support (:pep:`738`) is in the works as well.
+* :pep:`730`: Apple's iOS is now an officially supported platform,
+  at :pep:`tier 3 <11#tier-3>`.
+  Official Android support (:pep:`738`) is in the works as well.
+* ``wasm32-wasi`` is now a supported as a :pep:`tier 2 <11#tier-2>` platform.
+* ``wasm32-emscripten`` is no longer an officially supported platform.
 
-Removed modules:
+Important removals:
 
 * :ref:`PEP 594 <whatsnew313-pep594>`: The remaining 19 "dead batteries"
   have been removed from the standard library:
   :mod:`!aifc`, :mod:`!audioop`, :mod:`!cgi`, :mod:`!cgitb`, :mod:`!chunk`,
   :mod:`!crypt`, :mod:`!imghdr`, :mod:`!mailcap`, :mod:`!msilib`, :mod:`!nis`,
-  :mod:`!nntplib`, :mod:`!ossaudiodev`, :mod:`!pipes`, :mod:`!sndhdr`, :mod:`!spwd`,
-  :mod:`!sunau`, :mod:`!telnetlib`, :mod:`!uu` and :mod:`!xdrlib`.
-
-* Also removed were the :mod:`!tkinter.tix` and :mod:`!lib2to3` modules, and the
-  ``2to3`` program.
+  :mod:`!nntplib`, :mod:`!ossaudiodev`, :mod:`!pipes`, :mod:`!sndhdr`,
+  :mod:`!spwd`, :mod:`!sunau`, :mod:`!telnetlib`, :mod:`!uu` and :mod:`!xdrlib`.
+* Remove the :program:`!2to3` tool and :mod:`!lib2to3` module
+  (deprecated in Python 3.11).
+* Remove the :mod:`!tkinter.tix` module (deprecated in Python 3.6).
+* Remove :func:`!locale.resetlocale()`.
+* Remove :mod:`!typing.io` and :mod:`!typing.re`.
+* Remove chained :class:`classmethod` descriptors.
 
 Release schedule changes:
 
-* :pep:`602` ("Annual Release Cycle for Python") has been updated:
+:pep:`602` ("Annual Release Cycle for Python") has been updated
+to extend the full support ('bugfix') period for new releases to two years.
+This updated policy means that:
 
-  * Python 3.9 - 3.12 have one and a half years of full support,
-    followed by three and a half years of security fixes.
-  * Python 3.13 and later have two years of full support,
-    followed by three years of security fixes.
+* Python 3.9--3.12 have one and a half years of full support,
+  followed by three and a half years of security fixes.
+* Python 3.13 and later have two years of full support,
+  followed by three years of security fixes.
+
 
 New Features
 ============
@@ -247,14 +307,14 @@ Improved Error Messages
     TypeError: split() got an unexpected keyword argument 'max_split'. Did you mean 'maxsplit'?
 
 * Classes have a new :attr:`~class.__static_attributes__` attribute, populated by the compiler,
-  with a tuple of names of attributes of this class which are accessed
+  with a tuple of names of attributes of this class which are assigned
   through ``self.X`` from any function in its body. (Contributed by Irit Katriel
   in :gh:`115775`.)
 
 .. _whatsnew313-locals-semantics:
 
-Defined mutation semantics for ``locals()``
--------------------------------------------
+Defined mutation semantics for :py:func:`locals`
+------------------------------------------------
 
 Historically, the expected result of mutating the return value of :func:`locals`
 has been left to individual Python implementations to define.
@@ -322,7 +382,7 @@ Support For Mobile Platforms
 .. _whatsnew313-jit-compiler:
 
 Experimental JIT Compiler
-=========================
+-------------------------
 
 When CPython is configured using the ``--enable-experimental-jit`` option,
 a just-in-time compiler is added which may speed up some Python programs.
@@ -378,10 +438,10 @@ See :pep:`744` for more details.
 Tier 2 IR by Mark Shannon and Guido van Rossum.
 Tier 2 optimizer by Ken Jin.)
 
-.. _free-threaded-cpython:
+.. _whatsnew313-free-threaded-cpython:
 
 Free-threaded CPython
-=====================
+---------------------
 
 CPython will run with the :term:`global interpreter lock` (GIL) disabled when
 configured using the ``--disable-gil`` option at build time. This is an
@@ -543,7 +603,8 @@ Other Language Changes
 New Modules
 ===========
 
-* None.
+* :mod:`dbm.sqlite3`: SQLite backend for :mod:`dbm`.
+  (Contributed by Raymond Hettinger and Erlend E. Aasland in :gh:`100414`.)
 
 
 Improved Modules
@@ -664,7 +725,7 @@ base64
 
 * Add :func:`base64.z85encode` and :func:`base64.z85decode` functions which allow encoding
   and decoding Z85 data.
-  See `Z85  specification <https://rfc.zeromq.org/spec/32/>`_ for more information.
+  See the `Z85 specification <https://rfc.zeromq.org/spec/32/>`_ for more information.
   (Contributed by Matan Perelman in :gh:`75299`.)
 
 copy
@@ -735,6 +796,15 @@ doctest
 
 email
 -----
+
+* Headers with embedded newlines are now quoted on output.
+
+  The :mod:`~email.generator` will now refuse to serialize (write) headers
+  that are improperly folded or delimited, such that they would be parsed as
+  multiple headers or joined with adjacent data.
+  If you need to turn this safety feature off,
+  set :attr:`~email.policy.Policy.verify_generated_headers`.
+  (Contributed by Bas Bloemsaat and Petr Viktorin in :gh:`121650`.)
 
 * :func:`email.utils.getaddresses` and :func:`email.utils.parseaddr` now return
   ``('', '')`` 2-tuples in more situations where invalid email addresses are
@@ -1388,16 +1458,6 @@ locale
   use ``locale.setlocale(locale.LC_ALL, "")`` instead.
   (Contributed by Victor Stinner in :gh:`104783`.)
 
-logging
--------
-
-* :mod:`logging`: Remove undocumented and untested ``Logger.warn()`` and
-  ``LoggerAdapter.warn()`` methods and ``logging.warn()`` function. Deprecated
-  since Python 3.3, they were aliases to the :meth:`logging.Logger.warning`
-  method, :meth:`!logging.LoggerAdapter.warning` method and
-  :func:`logging.warning` function.
-  (Contributed by Victor Stinner in :gh:`105376`.)
-
 pathlib
 -------
 
@@ -1494,8 +1554,8 @@ New Deprecations
   (Contributed by Hugo van Kemenade in :gh:`80480`.)
 
 * :mod:`ctypes`: Deprecate undocumented :func:`!ctypes.SetPointerType`
-  and :func:`!ctypes.ARRAY` functions.
-  Replace ``ctypes.ARRAY(item_type, size)`` with ``item_type * size``.
+  function. :term:`Soft-deprecate <soft deprecated>` the :func:`ctypes.ARRAY`
+  function in favor of multiplication.
   (Contributed by Victor Stinner in :gh:`105733`.)
 
 * :mod:`decimal`: Deprecate non-standard format specifier "N" for
@@ -2208,6 +2268,9 @@ Removed C APIs
   be used instead.
   (Contributed by Serhiy Storchaka in :gh:`86493`.)
 
+* Remove undocumented ``PY_TIMEOUT_MAX`` constant from the limited C API.
+  (Contributed by Victor Stinner in :gh:`110014`.)
+
 Deprecated C APIs
 -----------------
 
@@ -2249,105 +2312,13 @@ Deprecated C APIs
   Refer to the deprecation notices on each function for their recommended replacements.
   (Soft deprecated as part of :pep:`667`.)
 
-Pending Removal in Python 3.14
-------------------------------
+.. Add deprecations above alphabetically, not here at the end.
 
-* Creating immutable types (:c:macro:`Py_TPFLAGS_IMMUTABLETYPE`) with mutable
-  bases using the C API.
+.. include:: ../deprecations/c-api-pending-removal-in-3.14.rst
 
-* Functions to configure the Python initialization, deprecated in Python 3.11:
+.. include:: ../deprecations/c-api-pending-removal-in-3.15.rst
 
-  * ``PySys_SetArgvEx()``: set :c:member:`PyConfig.argv` instead.
-  * ``PySys_SetArgv()``: set :c:member:`PyConfig.argv` instead.
-  * ``Py_SetProgramName()``: set :c:member:`PyConfig.program_name` instead.
-  * ``Py_SetPythonHome()``: set :c:member:`PyConfig.home` instead.
-
-  The :c:func:`Py_InitializeFromConfig` API should be used with
-  :c:type:`PyConfig` instead.
-
-* Global configuration variables:
-
-  * :c:var:`Py_DebugFlag`: use :c:member:`PyConfig.parser_debug`
-  * :c:var:`Py_VerboseFlag`: use :c:member:`PyConfig.verbose`
-  * :c:var:`Py_QuietFlag`: use :c:member:`PyConfig.quiet`
-  * :c:var:`Py_InteractiveFlag`: use :c:member:`PyConfig.interactive`
-  * :c:var:`Py_InspectFlag`: use :c:member:`PyConfig.inspect`
-  * :c:var:`Py_OptimizeFlag`: use :c:member:`PyConfig.optimization_level`
-  * :c:var:`Py_NoSiteFlag`: use :c:member:`PyConfig.site_import`
-  * :c:var:`Py_BytesWarningFlag`: use :c:member:`PyConfig.bytes_warning`
-  * :c:var:`Py_FrozenFlag`: use :c:member:`PyConfig.pathconfig_warnings`
-  * :c:var:`Py_IgnoreEnvironmentFlag`: use :c:member:`PyConfig.use_environment`
-  * :c:var:`Py_DontWriteBytecodeFlag`: use :c:member:`PyConfig.write_bytecode`
-  * :c:var:`Py_NoUserSiteDirectory`: use :c:member:`PyConfig.user_site_directory`
-  * :c:var:`Py_UnbufferedStdioFlag`: use :c:member:`PyConfig.buffered_stdio`
-  * :c:var:`Py_HashRandomizationFlag`: use :c:member:`PyConfig.use_hash_seed`
-    and :c:member:`PyConfig.hash_seed`
-  * :c:var:`Py_IsolatedFlag`: use :c:member:`PyConfig.isolated`
-  * :c:var:`Py_LegacyWindowsFSEncodingFlag`: use :c:member:`PyPreConfig.legacy_windows_fs_encoding`
-  * :c:var:`Py_LegacyWindowsStdioFlag`: use :c:member:`PyConfig.legacy_windows_stdio`
-  * :c:var:`!Py_FileSystemDefaultEncoding`: use :c:member:`PyConfig.filesystem_encoding`
-  * :c:var:`!Py_HasFileSystemDefaultEncoding`: use :c:member:`PyConfig.filesystem_encoding`
-  * :c:var:`!Py_FileSystemDefaultEncodeErrors`: use :c:member:`PyConfig.filesystem_errors`
-  * :c:var:`!Py_UTF8Mode`: use :c:member:`PyPreConfig.utf8_mode` (see :c:func:`Py_PreInitialize`)
-
-  The :c:func:`Py_InitializeFromConfig` API should be used with
-  :c:type:`PyConfig` instead.
-
-Pending Removal in Python 3.15
-------------------------------
-
-* The bundled copy of ``libmpdecimal``.
-* :c:func:`PyImport_ImportModuleNoBlock`: use :c:func:`PyImport_ImportModule`.
-* :c:func:`PyWeakref_GET_OBJECT`: use :c:func:`PyWeakref_GetRef` instead.
-* :c:func:`PyWeakref_GetObject`: use :c:func:`PyWeakref_GetRef` instead.
-* :c:type:`!Py_UNICODE_WIDE` type: use :c:type:`wchar_t` instead.
-* :c:type:`Py_UNICODE` type: use :c:type:`wchar_t` instead.
-* Python initialization functions:
-
-  * :c:func:`PySys_ResetWarnOptions`: clear :data:`sys.warnoptions` and
-    :data:`!warnings.filters` instead.
-  * :c:func:`Py_GetExecPrefix`: get :data:`sys.exec_prefix` instead.
-  * :c:func:`Py_GetPath`: get :data:`sys.path` instead.
-  * :c:func:`Py_GetPrefix`: get :data:`sys.prefix` instead.
-  * :c:func:`Py_GetProgramFullPath`: get :data:`sys.executable` instead.
-  * :c:func:`Py_GetProgramName`: get :data:`sys.executable` instead.
-  * :c:func:`Py_GetPythonHome`: get :c:member:`PyConfig.home` or
-    :envvar:`PYTHONHOME` environment variable instead.
-
-Pending Removal in Future Versions
-----------------------------------
-
-The following APIs were deprecated in earlier Python versions and will be
-removed, although there is currently no date scheduled for their removal.
-
-* :c:macro:`Py_TPFLAGS_HAVE_FINALIZE`: no needed since Python 3.8.
-* :c:func:`PyErr_Fetch`: use :c:func:`PyErr_GetRaisedException`.
-* :c:func:`PyErr_NormalizeException`: use :c:func:`PyErr_GetRaisedException`.
-* :c:func:`PyErr_Restore`: use :c:func:`PyErr_SetRaisedException`.
-* :c:func:`PyModule_GetFilename`: use :c:func:`PyModule_GetFilenameObject`.
-* :c:func:`PyOS_AfterFork`: use :c:func:`PyOS_AfterFork_Child()`.
-* :c:func:`PySlice_GetIndicesEx`.
-* :c:func:`!PyUnicode_AsDecodedObject`.
-* :c:func:`!PyUnicode_AsDecodedUnicode`.
-* :c:func:`!PyUnicode_AsEncodedObject`.
-* :c:func:`!PyUnicode_AsEncodedUnicode`.
-* :c:func:`PyUnicode_READY`: not needed since Python 3.12.
-* :c:func:`!_PyErr_ChainExceptions`.
-* :c:member:`!PyBytesObject.ob_shash` member:
-  call :c:func:`PyObject_Hash` instead.
-* :c:member:`!PyDictObject.ma_version_tag` member.
-* TLS API:
-
-  * :c:func:`PyThread_create_key`: use :c:func:`PyThread_tss_alloc`.
-  * :c:func:`PyThread_delete_key`: use :c:func:`PyThread_tss_free`.
-  * :c:func:`PyThread_set_key_value`: use :c:func:`PyThread_tss_set`.
-  * :c:func:`PyThread_get_key_value`: use :c:func:`PyThread_tss_get`.
-  * :c:func:`PyThread_delete_key_value`: use :c:func:`PyThread_tss_delete`.
-  * :c:func:`PyThread_ReInitTLS`: no longer needed.
-
-* Remove undocumented ``PY_TIMEOUT_MAX`` constant from the limited C API.
-  (Contributed by Victor Stinner in :gh:`110014`.)
-
+.. include:: ../deprecations/c-api-pending-removal-in-future.rst
 
 Regression Test Changes
 =======================
